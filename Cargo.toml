@@ -114,7 +114,7 @@ flate2 = "1.0.35"
 futures = "0.3.30"
 futures-util = "0.3.31"
 heck = "0.5.0"
-helius = { version = "0.2.6", git = "https://github.com/helius-labs/helius-rust-sdk.git" }
+helius = { version = "0.2.6", git = "https://github.com/helius-labs/helius-rust-sdk.git", rev = "a1316c5" }
 hex = "0.4.3"
 indicatif = "0.17.8"
 inquire = "0.7.5"
