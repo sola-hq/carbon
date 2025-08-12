@@ -1928,7 +1928,7 @@ dependencies = [
  "solana-instruction",
  "solana-program-pack",
  "solana-pubkey",
- "spl-token 6.0.0",
+ "spl-token 7.0.0",
  "sqlx",
  "sqlx_migrator",
 ]
@@ -9761,7 +9761,7 @@ dependencies = [
  "log",
  "rustls 0.23.27",
  "solana-account",
- "spl-token 6.0.0",
+ "spl-token 7.0.0",
  "tokio",
  "yellowstone-grpc-proto",
 ]
