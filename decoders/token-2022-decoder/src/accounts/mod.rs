@@ -1,8 +1,11 @@
 use {
     super::Token2022Decoder,
     crate::PROGRAM_ID,
-    carbon_core::{account::AccountDecoder, deserialize::CarbonDeserialize},
+    carbon_core::account::AccountDecoder,
+    solana_program_pack::Pack,
+    spl_token_2022::{extension::StateWithExtensions, state},
 };
+
 pub mod mint;
 pub mod multisig;
 pub mod token;
@@ -23,33 +26,33 @@ impl AccountDecoder<'_> for Token2022Decoder {
             return None;
         }
 
-        if let Some(decoded_account) = mint::Mint::deserialize(account.data.as_slice()) {
+        if let Ok(decoded_account) = StateWithExtensions::<state::Account>::unpack(&account.data) {
             return Some(carbon_core::account::DecodedAccount {
                 lamports: account.lamports,
-                data: Token2022Account::Mint(decoded_account),
                 owner: account.owner,
                 executable: account.executable,
                 rent_epoch: account.rent_epoch,
+                data: Token2022Account::Token(decoded_account.base.into()),
             });
         }
 
-        if let Some(decoded_account) = token::Token::deserialize(account.data.as_slice()) {
+        if let Ok(decoded_account) = StateWithExtensions::<state::Mint>::unpack(&account.data) {
             return Some(carbon_core::account::DecodedAccount {
                 lamports: account.lamports,
-                data: Token2022Account::Token(decoded_account),
                 owner: account.owner,
                 executable: account.executable,
                 rent_epoch: account.rent_epoch,
+                data: Token2022Account::Mint(decoded_account.base.into()),
             });
         }
 
-        if let Some(decoded_account) = multisig::Multisig::deserialize(account.data.as_slice()) {
+        if let Ok(decoded_account) = state::Multisig::unpack_unchecked(&account.data) {
             return Some(carbon_core::account::DecodedAccount {
                 lamports: account.lamports,
-                data: Token2022Account::Multisig(decoded_account),
                 owner: account.owner,
                 executable: account.executable,
                 rent_epoch: account.rent_epoch,
+                data: Token2022Account::Multisig(decoded_account.into()),
             });
         }
 
