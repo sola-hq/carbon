@@ -146,21 +146,22 @@ async fn main() -> anyhow::Result<()> {
             SHARKY_PROGRAM_ID,
             None,
         ))
-        .datasource(RpcProgramSubscribe::new(
+        .datasource(
             // Websocket RPC url, usually starts with "wss://"
-            env::var("RPC_WS_URL").unwrap_or_default(),
-            Filters::new(
-                SHARKY_PROGRAM_ID,
-                Some(RpcProgramAccountsConfig {
-                    filters: None,
-                    account_config: RpcAccountInfoConfig {
-                        encoding: Some(UiAccountEncoding::Base64),
+            RpcProgramSubscribe::new(env::var("RPC_WS_URL").unwrap_or_default()).with_filters(
+                Filters::new(
+                    SHARKY_PROGRAM_ID,
+                    Some(RpcProgramAccountsConfig {
+                        filters: None,
+                        account_config: RpcAccountInfoConfig {
+                            encoding: Some(UiAccountEncoding::Base64),
+                            ..Default::default()
+                        },
                         ..Default::default()
-                    },
-                    ..Default::default()
-                }),
+                    }),
+                ),
             ),
-        ))
+        )
         .account(SharkyDecoder, SharkyAccountProcessor)
         .metrics(Arc::new(LogMetrics::new()))
         .shutdown_strategy(ShutdownStrategy::ProcessPending)

@@ -43,15 +43,38 @@ pub struct RpcProgramSubscribe {
 }
 
 impl RpcProgramSubscribe {
-    pub fn new(rpc_ws_url: String, filters: Filters) -> Self {
+    pub const fn new(rpc_ws_url: String) -> Self {
         Self {
             rpc_ws_url,
-            filters: [filters].to_vec(),
+            filters: vec![],
         }
     }
 
+    /// Adds a single filter to the datasource.
+    ///
+    /// # Parameters
+    ///
+    /// - `filters`: A `Filters` to add to the datasource.
+    ///
+    /// # Returns
+    ///
+    /// A new `RpcProgramSubscribe` instance with the additional filter.
     pub fn with_filters(mut self, filters: Filters) -> Self {
         self.filters.push(filters);
+        self
+    }
+
+    /// Adds multiple filters to the datasource.
+    ///
+    /// # Parameters
+    ///
+    /// - `filters`: A vector of `Filters` to add to the datasource.
+    ///
+    /// # Returns
+    ///
+    /// A new `RpcProgramSubscribe` instance with the additional filters.
+    pub fn with_multiple_filters(mut self, filters: Vec<Filters>) -> Self {
+        self.filters.extend(filters);
         self
     }
 }
