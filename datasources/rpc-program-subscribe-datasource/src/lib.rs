@@ -192,7 +192,7 @@ impl Datasource for RpcProgramSubscribe {
                                         }
                                     },
                                     None => {
-                                        log::warn!("Program accounts stream has been closed, attempting to reconnect...");
+                                        log::warn!("Program accounts {pubkey} stream has been closed, attempting to reconnect...", pubkey = filter.pubkey);
                                         break;
                                     }
                                 }
