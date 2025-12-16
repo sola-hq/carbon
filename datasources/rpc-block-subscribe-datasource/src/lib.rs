@@ -77,12 +77,11 @@ impl Datasource for RpcBlockSubscribe {
             let client = match PubsubClient::new(&self.rpc_ws_url).await {
                 Ok(client) => client,
                 Err(err) => {
-                    log::error!("Failed to create RPC subscribe client: {}", err);
+                    log::error!("Failed to create RPC subscribe client: {err}");
                     reconnection_attempts += 1;
                     if reconnection_attempts >= MAX_RECONNECTION_ATTEMPTS {
                         return Err(carbon_core::error::Error::Custom(format!(
-                            "Failed to create RPC subscribe client after {} attempts: {}",
-                            MAX_RECONNECTION_ATTEMPTS, err
+                            "Failed to create RPC subscribe client after {MAX_RECONNECTION_ATTEMPTS} attempts: {err}"
                         )));
                     }
                     tokio::time::sleep(Duration::from_millis(RECONNECTION_DELAY_MS)).await;
@@ -100,12 +99,11 @@ impl Datasource for RpcBlockSubscribe {
             {
                 Ok(subscription) => subscription,
                 Err(err) => {
-                    log::error!("Failed to subscribe to block updates: {:?}", err);
+                    log::error!("Failed to subscribe to block updates: {err:?}");
                     reconnection_attempts += 1;
                     if reconnection_attempts > MAX_RECONNECTION_ATTEMPTS {
                         return Err(carbon_core::error::Error::Custom(format!(
-                            "Failed to subscribe after {} attempts: {}",
-                            MAX_RECONNECTION_ATTEMPTS, err
+                            "Failed to subscribe after {MAX_RECONNECTION_ATTEMPTS} attempts: {err}"
                         )));
                     }
                     tokio::time::sleep(Duration::from_millis(RECONNECTION_DELAY_MS)).await;
@@ -142,12 +140,12 @@ impl Datasource for RpcBlockSubscribe {
                                     });
 
                                     if let Err(err) = sender_clone.try_send((block_deteils, id_for_loop.clone())) {
-                                        log::error!("Error sending block details: {:?}", err);
+                                        log::error!("Error sending block details: {err:?}");
                                         break;
                                     }
 
                                     if let Some(transactions) = block.transactions {
-                                        for encoded_transaction_with_status_meta in transactions {
+                                        for (tx_index, encoded_transaction_with_status_meta) in transactions.into_iter().enumerate() {
                                             let start_time = std::time::Instant::now();
 
                                             let meta_original = if let Some(meta) = encoded_transaction_with_status_meta.clone().meta {
@@ -161,7 +159,7 @@ impl Datasource for RpcBlockSubscribe {
                                             }
 
                                             let Some(decoded_transaction) = encoded_transaction_with_status_meta.transaction.decode() else {
-                                                log::error!("Failed to decode transaction: {:?}", encoded_transaction_with_status_meta);
+                                                log::error!("Failed to decode transaction: {encoded_transaction_with_status_meta:?}");
                                                 continue;
                                             };
 
@@ -176,6 +174,7 @@ impl Datasource for RpcBlockSubscribe {
                                                 meta: meta_needed,
                                                 is_vote: false,
                                                 slot,
+                                                index: Some(tx_index as u64),
                                                 block_time: block.block_time,
                                                 block_hash,
                                             }));
@@ -186,14 +185,14 @@ impl Datasource for RpcBlockSubscribe {
                                                     start_time.elapsed().as_nanos() as f64
                                                 )
                                                 .await
-                                                .unwrap_or_else(|value| log::error!("Error recording metric: {}", value));
+                                                .unwrap_or_else(|value| log::error!("Error recording metric: {value}"));
 
                                             metrics.increment_counter("block_subscribe_transactions_processed", 1)
                                                 .await
-                                                .unwrap_or_else(|value| log::error!("Error recording metric: {}", value));
+                                                .unwrap_or_else(|value| log::error!("Error recording metric: {value}"));
 
                                             if let Err(err) = sender_clone.try_send((update, id_for_loop.clone())) {
-                                                log::error!("Error sending transaction update: {:?}", err);
+                                                log::error!("Error sending transaction update: {err:?}");
                                                 break;
                                             }
                                         }
@@ -205,11 +204,11 @@ impl Datasource for RpcBlockSubscribe {
                                             block_start_time.elapsed().as_nanos() as f64
                                         )
                                         .await
-                                        .unwrap_or_else(|value| log::error!("Error recording metric: {}", value));
+                                        .unwrap_or_else(|value| log::error!("Error recording metric: {value}"));
 
                                     metrics.increment_counter("block_subscribe_blocks_received", 1)
                                         .await
-                                        .unwrap_or_else(|value| log::error!("Error recording metric: {}", value));
+                                        .unwrap_or_else(|value| log::error!("Error recording metric: {value}"));
                                 }
                             }
                             None => {

@@ -74,99 +74,70 @@ Carbon provides a CLI tool to generate decoders based on IDL files (Anchor, Coda
 
 #### CLI Installation
 
-You can install the Carbon CLI by downloading the pre-built binary for your operating system:
-
-##### Linux
+Install the Carbon CLI via npm:
 
 ```sh
-curl -LO https://github.com/sevenlabs-hq/carbon/releases/latest/download/carbon-cli-linux-amd64
-chmod +x carbon-cli-linux-amd64
-sudo mv carbon-cli-linux-amd64 /usr/local/bin/carbon-cli
-```
+# Install globally
+npm install -g @sevenlabs-hq/carbon-cli
 
-##### macOS
-
-```sh
-curl -LO https://github.com/sevenlabs-hq/carbon/releases/latest/download/carbon-cli-macos-amd64
-chmod +x carbon-cli-macos-amd64
-sudo mv carbon-cli-macos-amd64 /usr/local/bin/carbon-cli
-```
-
-##### Windows
-
-1. Download the latest release from <https://github.com/sevenlabs-hq/carbon/releases/latest/download/carbon-cli-windows-amd64.exe>
-2. Rename the downloaded file to `carbon-cli.exe`
-3. Move the file to a directory in your PATH
-
-Alternatively, you can build from source using Cargo:
-
-```sh
-cargo install --git https://github.com/sevenlabs-hq/carbon.git carbon-cli
+# Or use npx (no installation required)
+npx @sevenlabs-hq/carbon-cli
 ```
 
 #### CLI Usage
 
 ```sh
-carbon-cli parse [OPTIONS] --idl <IDL> --output <OUTPUT>
+carbon-cli parse [OPTIONS]
+carbon-cli scaffold [OPTIONS]
 ```
 
-#### Options
+#### Parse Options
 
-- `-i, --idl <IDL>`: Path to an IDL json file or a Solana program address.
-- `-o, --output <OUTPUT>`: Path to the desired output directory.
-- `-c, --as-crate`: Generate a directory or a crate.
-- `-s, --standard`: Specify the IDL standard to parse. Default: 'anchor' if not specified..
-- `-e, --event-hints`: Comma-separated names of defined types to parse as CPI Events (for '--standard codama' option only).
-- `-u, --url`: Network URL to fetch the IDL from. Required if input is a program address.
-- `-h, --help`: Print help information.
+- `-i, --idl <fileOrAddress>`: Path to an IDL json file or a Solana program address
+- `-o, --out-dir <dir>`: Output directory for generated code
+- `-c, --as-crate`: Generate as a Cargo crate layout
+- `-s, --standard <anchor|codama>`: Specify the IDL standard to parse (default: anchor)
+- `--event-hints <csv>`: Comma-separated names of defined types to parse as CPI Events (Codama only)
+- `-u, --url <rpcUrl>`: RPC URL for fetching IDL when using a program address
+- `--no-clean`: Do not delete output directory before rendering
+
+#### Scaffold Options
+
+- `-n, --name <string>`: Name of your project
+- `-o, --out-dir <dir>`: Output directory
+- `-d, --decoder <name>`: Decoder name (auto-detected from IDL)
+- `--idl <fileOrAddress>`: IDL file or program address
+- `--idl-standard <anchor|codama>`: IDL standard
+- `--idl-url <rpcUrl>`: RPC URL for fetching IDL (when using program address)
+- `--event-hints <csv>`: Event hints for Codama IDL
+- `-s, --data-source <name>`: Name of data source
+- `-m, --metrics <log|prometheus>`: Metrics to use (default: log)
+- `--with-postgres <boolean>`: Include Postgres wiring and deps (default: true)
+- `--with-graphql <boolean>`: Include GraphQL wiring and deps (default: true)
+- `--with-serde <boolean>`: Include serde feature for decoder (default: false)
+- `--force`: Overwrite output directory if it exists
 
 #### Examples
 
-##### Generate Decoder
-
-1. To generate a decoder from an Anchor IDL file:
+**Generate decoder from Anchor IDL:**
 
 ```sh
-carbon-cli parse --idl my_program.json --output ./src/decoders
+carbon-cli parse --idl my_program.json --out-dir ./src/decoders
 ```
 
-or with interactive mode:
-
-![Animated GIF making a demonstration of an anchor program parsing](./assets/parse_anchor.gif)
-
-This will parse the my_program.json Anchor IDL file and generate the corresponding decoder code in the ./src/decoders directory.
-
-2. To generate a decoder from an Anchor PDA IDL, specify a program address (Meteora DLMM program in this case):
+**Generate decoder from program address:**
 
 ```sh
-carbon-cli parse --idl LBUZKhRxPF3XUpBCjp4YzTKgLccjZhTSDM9YuVaPwxo -u mainnet-beta --output ./src/decoders
+carbon-cli parse --idl LBUZKhRxPF3XUpBCjp4YzTKgLccjZhTSDM9YuVaPwxo -u mainnet-beta --out-dir ./desired-folder
 ```
 
-This will fetch Meteora DLMM program's IDL from chain and generate the corresponding decoder code in the ./src/decoders directory.
-
-3. To generate a decoder from a Codama IDL:
+**Scaffold project using IDL file:**
 
 ```sh
-carbon-cli parse --idl my_program_codama.json --output ./src/decoders --standard codama
+carbon-cli scaffold --name my-project --out-dir ./desired-folder --idl ./idl.json --data-source yellowstone-grpc
 ```
 
-This will parse the my_program_codama.json Codama IDL file and generate the corresponding decoder code in the ./src/decoders directory.
-
-**Note**: in order to parse CPI Events for a provided Codama IDL, add `--event-hints` option with comma-separated names of corresponding defined Codama types:
-
-```sh
-carbon-cli parse --idl my_program_codama.json --output ./src/decoders --standard codama --event-hints event1,event2,event3
-```
-
-##### Scaffold Project
-
-```sh
-carbon-cli scaffold --name degen-paradize --output ./desired-folder --decoders pumpfun,moonshot,raydium-amm-v4 --data-source yellowstone-grpc
-```
-
-or with interactive mode:
-
-![Animated GIF making a demonstration of an scaffolding the project](./assets/scaffold.gif)
+For more detailed usage information and examples, check out the [npm package documentation](https://www.npmjs.com/package/@sevenlabs-hq/carbon-cli).
 
 ### Implementing Processors
 
@@ -230,59 +201,68 @@ impl Datasource for MyDataSource {
 
 Decoders for most popular Solana programs are published and maintained:
 
-| Crate Name                                 | Description                               | Program ID                                   |
-| ------------------------------------------ | ----------------------------------------- | -------------------------------------------- |
-| `carbon-address-lookup-table-decoder`      | Address Lookup Table Decoder              | AddressLookupTab1e1111111111111111111111111  |
-| `carbon-associated-token-account-decoder`  | Associated Token Account Decoder          | ATokenGPvbdGVxr1b2hvZbsiqW5xWH25efTNsLJA8knL |
-| `carbon-boop-decoder`                      | Boop Decoder                              | boop8hVGQGqehUK2iVEMEnMrL5RbjywRzHKBmBE7ry4  |
-| `carbon-bubblegum-decoder`                 | Bubblegum Decoder                         | BGUMAp9Gq7iTEuizy4pqaxsTyUCBK68MDfK752saRPUY |
-| `carbon-drift-v2-decoder`                  | Drift V2 Program Decoder                  | dRiftyHA39MWEi3m9aunc5MzRF1JYuBsbn6VPcn33UH  |
-| `carbon-fluxbeam-decoder`                  | Fluxbeam Program Decoder                  | FLUXubRmkEi2q6K3Y9kBPg9248ggaZVsoSFhtJHSrm1X |
-| `carbon-gavel-decoder`                     | Gavel Pool Decoder                        | srAMMzfVHVAtgSJc8iH6CfKzuWuUTzLHVCE81QU1rgi  |
-| `carbon-jupiter-dca-decoder`               | Jupiter DCA Program Decoder               | DCA265Vj8a9CEuX1eb1LWRnDT7uK6q1xMipnNyatn23M |
-| `carbon-jupiter-limit-order-decoder`       | Jupiter Limit Order Program Decoder       | jupoNjAxXgZ4rjzxzPMP4oxduvQsQtZzyknqvzYNrNu  |
-| `carbon-jupiter-limit-order-2-decoder`     | Jupiter Limit Order 2 Program Decoder     | j1o2qRpjcyUwEvwtcfhEQefh773ZgjxcVRry7LDqg5X  |
-| `carbon-jupiter-perpetuals-decoder`        | Jupiter Perpetuals Program Decoder        | PERPHjGBqRHArX4DySjwM6UJHiR3sWAatqfdBS2qQJu  |
-| `carbon-jupiter-swap-decoder`              | Jupiter Swap Program Decoder              | JUP6LkbZbjS1jKKwapdHNy74zcZ3tLUZoi5QNyVTaV4  |
-| `carbon-kamino-farms-decoder`              | Kamino Farms Program Decoder              | FarmsPZpWu9i7Kky8tPN37rs2TpmMrAZrC7S7vJa91Hr |
-| `carbon-kamino-lending-decoder`            | Kamino Lend Decoder                       | KLend2g3cP87fffoy8q1mQqGKjrxjC8boSyAYavgmjD  |
-| `carbon-kamino-limit-order-decoder`        | Kamino Limit Order Program Decoder        | LiMoM9rMhrdYrfzUCxQppvxCSG1FcrUK9G8uLq4A1GF  |
-| `carbon-kamino-vault-decoder`              | Kamino Vault Decoder                      | kvauTFR8qm1dhniz6pYuBZkuene3Hfrs1VQhVRgCNrr  |
-| `carbon-lifinity-amm-v2-decoder`           | Lifinity AMM V2 Program Decoder           | 2wT8Yq49kHgDzXuPxZSaeLaH1qbmGXtEyPy64bL7aD3c |
-| `carbon-marginfi-v2-decoder`               | Marginfi V2 Program Decoder               | MFv2hWf31Z9kbCa1snEPYctwafyhdvnV7FZnsebVacA  |
-| `carbon-marinade-finance-decoder`          | Marinade Finance Program Decoder          | MarBmsSgKXdrN1egZf5sqe1TMai9K1rChYNDJgjq7aD  |
-| `carbon-memo-program-decoder`              | SPL Memo Program Decoder                  | Memo1UhkJRfHyvLMcVucJwxXeuD728EqVDDwQDxFMNo  |
-| `carbon-meteora-damm-v2-decoder`           | Meteora DAMM V2 Program Decoder           | cpamdpZCGKUy5JxQXB4dcpGPiikHawvSWAd6mEn1sGG  |
-| `carbon-meteora-dlmm-decoder`              | Meteora DLMM Program Decoder              | LBUZKhRxPF3XUpBCjp4YzTKgLccjZhTSDM9YuVaPwxo  |
-| `carbon-meteora-pools-decoder`             | Meteora Pools Program Decoder             | Eo7WjKq67rjJQSZxS6z3YkapzY3eMj6Xy8X5EQVn5UaB |
-| `carbon-moonshot-decoder`                  | Moonshot Program Decoder                  | MoonCVVNZFSYkqNXP6bxHLPL6QQJiMagDL3qcqUQTrG  |
-| `carbon-mpl-core-decoder`                  | MPL Core Program Decoder                  | CoREENxT6tW1HoK8ypY1SxRMZTcVPm7R94rH4PZNhX7d |
-| `carbon-mpl-token-metadata-decoder`        | MPL Token Metadata Program Decoder        | metaqbxxUerdq28cj1RbAWkYQm3ybzjb6a8bt518x1s  |
-| `carbon-name-service-decoder`              | SPL Name Service Program Decoder          | namesLPneVptA9Z5rqUDD9tMTWEJwofgaYwp8cawRkX  |
-| `carbon-okx-dex-decoder`                   | OKX DEX Decoder                           | 6m2CDdhRgxpH4WjvdzxAYbGxwdGUz5MziiL5jek2kBma |
-| `carbon-openbook-v2-decoder`               | Openbook V2 Program Decoder               | opnb2LAfJYbRMAHHvqjCwQxanZn7ReEHp1k81EohpZb  |
-| `carbon-orca-whirlpool-decoder`            | Orca Whirlpool Program Decoder            | whirLbMiicVdio4qvUfM5KAg6Ct8VwpYzGff3uctyCc  |
-| `carbon-phoenix-v1-decoder`                | Phoenix V1 Program Decoder                | PhoeNiXZ8ByJGLkxNfZRnkUfjvmuYqLR89jjFHGqdXY  |
-| `carbon-pumpfun-decoder`                   | Pumpfun Program Decoder                   | 6EF8rrecthR5Dkzon8Nwu78hRvfCKubJ14M5uBEwF6P  |
-| `carbon-pump-swap-decoder`                 | PumpSwap Program Decoder                  | pAMMBay6oceH9fJKBRHGP5D4bD4sWpmSwMn52FMfXEA  |
-| `carbon-raydium-amm-v4-decoder`            | Raydium AMM V4 Program Decoder            | 675kPX9MHTjS2zt1qfr1NYHuzeLXfQM9H24wFSUt1Mp8 |
-| `carbon-raydium-clmm-decoder`              | Raydium CLMM Program Decoder              | CAMMCzo5YL8w4VFF8KVHrK22GGUsp5VTaW7grrKgrWqK |
-| `carbon-raydium-cpmm-decoder`              | Raydium CPMM Program Decoder              | CPMMoo8L3F4NbTegBCKVNunggL7H1ZpdTHKxQB5qKP1C |
-| `carbon-raydium-launchpad-decoder`         | Raydium Launchpad Program Decoder         | LanMV9sAd7wArD4vJFi2qDdfnVhFxYSUg6eADduJ3uj  |
-| `carbon-raydium-liquidity-locking-decoder` | Raydium Liquidity Locking Program Decoder | LockrWmn6K5twhz3y9w1dQERbmgSaRkfnTeTKbpofwE  |
-| `carbon-raydium-stable-swap-decoder`       | Raydium Stable Swap Program Decoder       | 5quBtoiQqxF9Jv6KYKctB59NT3gtJD2Y65kdnB1Uev3h |
-| `carbon-sharky-decoder`                    | SharkyFi Decoder                          | SHARKobtfF1bHhxD2eqftjHBdVSCbKo9JtgK71FhELP  |
-| `carbon-solayer-pool-restaking-decoder`    | Solayer Pool Restaking Program Decoder    | sSo1iU21jBrU9VaJ8PJib1MtorefUV4fzC9GURa2KNn  |
-| `carbon-stabble-stable-swap-decoder`       | Stabble Stable Swap Decoder               | swapNyd8XiQwJ6ianp9snpu4brUqFxadzvHebnAXjJZ  |
-| `carbon-stabble-weighted-swap-decoder`     | Stabble Weighted Swap Decoder             | swapFpHZwjELNnjvThjajtiVmkz3yPQEHjLtka2fwHW  |
-| `carbon-stake-program-decoder`             | Stake Program Decoder                     | Stake11111111111111111111111111111111111111  |
-| `carbon-system-program-decoder`            | System Program Decoder                    | 11111111111111111111111111111111             |
-| `carbon-token-2022-decoder`                | Token 2022 Program Decoder                | TokenzQdBNbLqP5VEhdkAS6EPFLC1PHnBqCXEpPxuEb  |
-| `carbon-token-program-decoder`             | Token Program Decoder                     | TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA  |
-| `carbon-virtual-curve-decoder`             | Meteora Virtual Curve Program Decoder     | dbcij3LWUppWqq96dh6gJWwBifmcGfLSB5D4DuSMaqN  |
-| `carbon-virtuals-decoder`                  | Virtuals Program Decoder                  | 5U3EU2ubXtK84QcRjWVmYt9RaDyA8gKxdUrPFXmZyaki |
-| `carbon-wavebreak-decoder`                 | Wavebreak Program Decoder                 | waveQX2yP3H1pVU8djGvEHmYg8uamQ84AuyGtpsrXTF  |
-| `carbon-zeta-decoder`                      | Zeta Program Decoder                      | ZETAxsqBRek56DhiGXrn75yj2NHU3aYUnxvHXpkf3aD  |
+| Crate Name                                     | Description                                | Program ID                                   |
+| ---------------------------------------------- | ------------------------------------------ | -------------------------------------------- |
+| `carbon-address-lookup-table-decoder`          | Address Lookup Table Decoder               | AddressLookupTab1e1111111111111111111111111  |
+| `carbon-associated-token-account-decoder`      | Associated Token Account Decoder           | ATokenGPvbdGVxr1b2hvZbsiqW5xWH25efTNsLJA8knL |
+| `carbon-bonkswap-decoder`                      | Bonkswap Program Decoder                   | BSwp6bEBihVLdqJRKGgzjcGLHkcTuzmSo1TQkHepzH8p |
+| `carbon-boop-decoder`                          | Boop Decoder                               | boop8hVGQGqehUK2iVEMEnMrL5RbjywRzHKBmBE7ry4  |
+| `carbon-bubblegum-decoder`                     | Bubblegum Decoder                          | BGUMAp9Gq7iTEuizy4pqaxsTyUCBK68MDfK752saRPUY |
+| `carbon-circle-message-transmitter-v2-decoder` | Circle CCTP Message Transmitter V2 Decoder | CCTPV2Sm4AdWt5296sk4P66VBZ7bEhcARwFaaS9YPbeC |
+| `carbon-circle-token-messenger-v2-decoder`     | Circle CCTP Token Messenger V2 Decoder     | CCTPV2vPZJS2u2BBsUoscuikbYjnpFmbFsvVuJdgUMQe |
+| `carbon-drift-v2-decoder`                      | Drift V2 Program Decoder                   | dRiftyHA39MWEi3m9aunc5MzRF1JYuBsbn6VPcn33UH  |
+| `carbon-fluxbeam-decoder`                      | Fluxbeam Program Decoder                   | FLUXubRmkEi2q6K3Y9kBPg9248ggaZVsoSFhtJHSrm1X |
+| `carbon-gavel-decoder`                         | Gavel Pool Decoder                         | srAMMzfVHVAtgSJc8iH6CfKzuWuUTzLHVCE81QU1rgi  |
+| `carbon-heaven-decoder`                        | Heaven Program Decoder                     | HEAVENoP2qxoeuF8Dj2oT1GHEnu49U5mJYkdeC8BAX2o |
+| `carbon-jupiter-dca-decoder`                   | Jupiter DCA Program Decoder                | DCA265Vj8a9CEuX1eb1LWRnDT7uK6q1xMipnNyatn23M |
+| `carbon-jupiter-limit-order-decoder`           | Jupiter Limit Order Program Decoder        | jupoNjAxXgZ4rjzxzPMP4oxduvQsQtZzyknqvzYNrNu  |
+| `carbon-jupiter-limit-order-2-decoder`         | Jupiter Limit Order 2 Program Decoder      | j1o2qRpjcyUwEvwtcfhEQefh773ZgjxcVRry7LDqg5X  |
+| `carbon-jupiter-perpetuals-decoder`            | Jupiter Perpetuals Program Decoder         | PERPHjGBqRHArX4DySjwM6UJHiR3sWAatqfdBS2qQJu  |
+| `carbon-jupiter-swap-decoder`                  | Jupiter Swap Program Decoder               | JUP6LkbZbjS1jKKwapdHNy74zcZ3tLUZoi5QNyVTaV4  |
+| `carbon-kamino-farms-decoder`                  | Kamino Farms Program Decoder               | FarmsPZpWu9i7Kky8tPN37rs2TpmMrAZrC7S7vJa91Hr |
+| `carbon-kamino-lending-decoder`                | Kamino Lend Decoder                        | KLend2g3cP87fffoy8q1mQqGKjrxjC8boSyAYavgmjD  |
+| `carbon-kamino-limit-order-decoder`            | Kamino Limit Order Program Decoder         | LiMoM9rMhrdYrfzUCxQppvxCSG1FcrUK9G8uLq4A1GF  |
+| `carbon-kamino-vault-decoder`                  | Kamino Vault Decoder                       | kvauTFR8qm1dhniz6pYuBZkuene3Hfrs1VQhVRgCNrr  |
+| `carbon-lifinity-amm-v2-decoder`               | Lifinity AMM V2 Program Decoder            | 2wT8Yq49kHgDzXuPxZSaeLaH1qbmGXtEyPy64bL7aD3c |
+| `carbon-marginfi-v2-decoder`                   | Marginfi V2 Program Decoder                | MFv2hWf31Z9kbCa1snEPYctwafyhdvnV7FZnsebVacA  |
+| `carbon-marinade-finance-decoder`              | Marinade Finance Program Decoder           | MarBmsSgKXdrN1egZf5sqe1TMai9K1rChYNDJgjq7aD  |
+| `carbon-memo-program-decoder`                  | SPL Memo Program Decoder                   | Memo1UhkJRfHyvLMcVucJwxXeuD728EqVDDwQDxFMNo  |
+| `carbon-meteora-damm-v2-decoder`               | Meteora DAMM V2 Program Decoder            | cpamdpZCGKUy5JxQXB4dcpGPiikHawvSWAd6mEn1sGG  |
+| `carbon-meteora-dbc-decoder`                   | Meteora DBC Program Decoder                | dbcij3LWUppWqq96dh6gJWwBifmcGfLSB5D4DuSMaqN  |
+| `carbon-meteora-dlmm-decoder`                  | Meteora DLMM Program Decoder               | LBUZKhRxPF3XUpBCjp4YzTKgLccjZhTSDM9YuVaPwxo  |
+| `carbon-meteora-pools-decoder`                 | Meteora Pools Program Decoder              | Eo7WjKq67rjJQSZxS6z3YkapzY3eMj6Xy8X5EQVn5UaB |
+| `carbon-meteora-vault-decoder`                 | Meteora Vault Program Decoder              | 24Uqj9JCLxUeoC3hGfh5W3s9FM9uCHDS2SG3LYwBpyTi |
+| `carbon-moonshot-decoder`                      | Moonshot Program Decoder                   | MoonCVVNZFSYkqNXP6bxHLPL6QQJiMagDL3qcqUQTrG  |
+| `carbon-mpl-core-decoder`                      | MPL Core Program Decoder                   | CoREENxT6tW1HoK8ypY1SxRMZTcVPm7R94rH4PZNhX7d |
+| `carbon-mpl-token-metadata-decoder`            | MPL Token Metadata Program Decoder         | metaqbxxUerdq28cj1RbAWkYQm3ybzjb6a8bt518x1s  |
+| `carbon-name-service-decoder`                  | SPL Name Service Program Decoder           | namesLPneVptA9Z5rqUDD9tMTWEJwofgaYwp8cawRkX  |
+| `carbon-okx-dex-decoder`                       | OKX DEX Decoder                            | 6m2CDdhRgxpH4WjvdzxAYbGxwdGUz5MziiL5jek2kBma |
+| `carbon-openbook-v2-decoder`                   | Openbook V2 Program Decoder                | opnb2LAfJYbRMAHHvqjCwQxanZn7ReEHp1k81EohpZb  |
+| `carbon-orca-whirlpool-decoder`                | Orca Whirlpool Program Decoder             | whirLbMiicVdio4qvUfM5KAg6Ct8VwpYzGff3uctyCc  |
+| `carbon-pancake-swap-decoder`                  | Pancake Swap Program Decoder               | HpNfyc2Saw7RKkQd8nEL4khUcuPhQ7WwY1B2qjx8jxFq |
+| `carbon-phoenix-v1-decoder`                    | Phoenix V1 Program Decoder                 | PhoeNiXZ8ByJGLkxNfZRnkUfjvmuYqLR89jjFHGqdXY  |
+| `carbon-pumpfun-decoder`                       | Pumpfun Program Decoder                    | 6EF8rrecthR5Dkzon8Nwu78hRvfCKubJ14M5uBEwF6P  |
+| `carbon-pump-swap-decoder`                     | PumpSwap Program Decoder                   | pAMMBay6oceH9fJKBRHGP5D4bD4sWpmSwMn52FMfXEA  |
+| `carbon-pump-fees-decoder`                     | Pump Fees Program Decoder                  | pfeeUxB6jkeY1Hxd7CsFCAjcbHA9rWtchMGdZ6VojVZ  |
+| `carbon-raydium-amm-v4-decoder`                | Raydium AMM V4 Program Decoder             | 675kPX9MHTjS2zt1qfr1NYHuzeLXfQM9H24wFSUt1Mp8 |
+| `carbon-raydium-clmm-decoder`                  | Raydium CLMM Program Decoder               | CAMMCzo5YL8w4VFF8KVHrK22GGUsp5VTaW7grrKgrWqK |
+| `carbon-raydium-cpmm-decoder`                  | Raydium CPMM Program Decoder               | CPMMoo8L3F4NbTegBCKVNunggL7H1ZpdTHKxQB5qKP1C |
+| `carbon-raydium-launchpad-decoder`             | Raydium Launchpad Program Decoder          | LanMV9sAd7wArD4vJFi2qDdfnVhFxYSUg6eADduJ3uj  |
+| `carbon-raydium-liquidity-locking-decoder`     | Raydium Liquidity Locking Program Decoder  | LockrWmn6K5twhz3y9w1dQERbmgSaRkfnTeTKbpofwE  |
+| `carbon-raydium-stable-swap-decoder`           | Raydium Stable Swap Program Decoder        | 5quBtoiQqxF9Jv6KYKctB59NT3gtJD2Y65kdnB1Uev3h |
+| `carbon-sharky-decoder`                        | SharkyFi Decoder                           | SHARKobtfF1bHhxD2eqftjHBdVSCbKo9JtgK71FhELP  |
+| `carbon-solayer-pool-restaking-decoder`        | Solayer Pool Restaking Program Decoder     | sSo1iU21jBrU9VaJ8PJib1MtorefUV4fzC9GURa2KNn  |
+| `carbon-stabble-stable-swap-decoder`           | Stabble Stable Swap Decoder                | swapNyd8XiQwJ6ianp9snpu4brUqFxadzvHebnAXjJZ  |
+| `carbon-stabble-weighted-swap-decoder`         | Stabble Weighted Swap Decoder              | swapFpHZwjELNnjvThjajtiVmkz3yPQEHjLtka2fwHW  |
+| `carbon-stake-program-decoder`                 | Stake Program Decoder                      | Stake11111111111111111111111111111111111111  |
+| `carbon-swig-decoder`                          | Swig Decoder                               | swigypWHEksbC64pWKwah1WTeh9JXwx8H1rJHLdbQMB  |
+| `carbon-system-program-decoder`                | System Program Decoder                     | 11111111111111111111111111111111             |
+| `carbon-token-2022-decoder`                    | Token 2022 Program Decoder                 | TokenzQdBNbLqP5VEhdkAS6EPFLC1PHnBqCXEpPxuEb  |
+| `carbon-token-program-decoder`                 | Token Program Decoder                      | TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA  |
+| `carbon-vertigo-decoder`                       | Vertigo Program Decoder                    | vrTGoBuy5rYSxAfV3jaRJWHH6nN9WK4NRExGxsk1bCJ  |
+| `carbon-virtuals-decoder`                      | Virtuals Program Decoder                   | 5U3EU2ubXtK84QcRjWVmYt9RaDyA8gKxdUrPFXmZyaki |
+| `carbon-wavebreak-decoder`                     | Wavebreak Program Decoder                  | waveQX2yP3H1pVU8djGvEHmYg8uamQ84AuyGtpsrXTF  |
+| `carbon-zeta-decoder`                          | Zeta Program Decoder                       | ZETAxsqBRek56DhiGXrn75yj2NHU3aYUnxvHXpkf3aD  |
 
 ## Pre-commit hooks
 

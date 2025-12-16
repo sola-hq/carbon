@@ -80,11 +80,7 @@ where
 /// - This function is particularly useful for decoding prefixed data
 ///   structures, such as those commonly found in Solana transactions.
 pub fn extract_discriminator(length: usize, data: &[u8]) -> Option<(&[u8], &[u8])> {
-    log::trace!(
-        "extract_discriminator(length: {:?}, data: {:?})",
-        length,
-        data
-    );
+    log::trace!("extract_discriminator(length: {length:?}, data: {data:?})");
 
     if data.len() < length {
         return None;
@@ -154,7 +150,7 @@ impl crate::borsh::BorshDeserialize for PrefixString {
 
 /// A wrapper type for strings that are prefixed with their length.
 
-#[derive(serde::Serialize, Default, serde::Deserialize, PartialEq, Eq, Clone)]
+#[derive(serde::Serialize, Default, serde::Deserialize, PartialEq, Eq, Clone, Hash)]
 pub struct U64PrefixString(pub String);
 
 impl Deref for U64PrefixString {

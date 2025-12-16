@@ -99,12 +99,11 @@ impl Datasource for RpcProgramSubscribe {
             let client = match PubsubClient::new(&self.rpc_ws_url).await {
                 Ok(client) => client,
                 Err(err) => {
-                    log::error!("Failed to create RPC subscribe client: {}", err);
+                    log::error!("Failed to create RPC subscribe client: {err}");
                     reconnection_attempts += 1;
                     if reconnection_attempts >= MAX_RECONNECTION_ATTEMPTS {
                         return Err(carbon_core::error::Error::Custom(format!(
-                            "Failed to create RPC subscribe client after {} attempts: {}",
-                            MAX_RECONNECTION_ATTEMPTS, err
+                            "Failed to create RPC subscribe client after {MAX_RECONNECTION_ATTEMPTS} attempts: {err}"
                         )));
                     }
                     tokio::time::sleep(Duration::from_millis(RECONNECTION_DELAY_MS)).await;
@@ -173,6 +172,7 @@ impl Datasource for RpcProgramSubscribe {
                                             pubkey: account_pubkey,
                                             account: decoded_account,
                                             slot: acc_event.context.slot,
+                                            transaction_signature: None,
                                         });
 
                                         metrics.record_histogram(

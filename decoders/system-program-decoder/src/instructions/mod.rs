@@ -14,7 +14,14 @@ pub mod upgrade_nonce_account;
 pub mod withdraw_nonce_account;
 
 #[derive(
-    carbon_core::InstructionType, serde::Serialize, serde::Deserialize, PartialEq, Debug, Clone,
+    carbon_core::InstructionType,
+    serde::Serialize,
+    serde::Deserialize,
+    PartialEq,
+    Debug,
+    Clone,
+    Eq,
+    Hash,
 )]
 pub enum SystemProgramInstruction {
     CreateAccount(create_account::CreateAccount),
@@ -41,7 +48,7 @@ impl carbon_core::instruction::InstructionDecoder<'_> for SystemProgramDecoder {
     ) -> Option<carbon_core::instruction::DecodedInstruction<Self::InstructionType>> {
         if !instruction
             .program_id
-            .eq(&solana_program::system_program::id())
+            .eq(&solana_system_interface::program::id())
         {
             return None;
         }
@@ -135,7 +142,7 @@ mod tests {
         // Assert
         assert_eq!(decoded.data, expected_ix);
         assert_eq!(decoded.accounts, expected_accounts);
-        assert_eq!(decoded.program_id, solana_program::system_program::id());
+        assert_eq!(decoded.program_id, solana_system_interface::program::id());
         assert_eq!(decoded_arranged_accounts, expected_arranged_accounts);
     }
 }

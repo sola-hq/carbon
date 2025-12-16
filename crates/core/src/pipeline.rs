@@ -364,7 +364,7 @@ impl Pipeline {
                     )
                     .await
                 {
-                    log::error!("error consuming datasource: {:?}", e);
+                    log::error!("error consuming datasource: {e:?}");
                 }
             });
         }
@@ -430,7 +430,7 @@ impl Pipeline {
                                     log::trace!("processed update")
                                 }
                                 Err(error) => {
-                                    log::error!("error processing update ({:?}): {:?}", update, error);
+                                    log::error!("error processing update ({update:?}): {error:?}");
                                     self.metrics.increment_counter("updates_failed", 1).await?;
                                 }
                             };
@@ -514,16 +514,13 @@ impl Pipeline {
     /// issue arises while incrementing counters or updating metrics. Handle
     /// errors gracefully to ensure continuous pipeline operation.
     async fn process(&mut self, update: Update, datasource_id: DatasourceId) -> CarbonResult<()> {
-        log::trace!(
-            "process(self, update: {:?}, datasource_id: {:?})",
-            update,
-            datasource_id
-        );
+        log::trace!("process(self, update: {update:?}, datasource_id: {datasource_id:?})");
         match update {
             Update::Account(account_update) => {
                 let account_metadata = AccountMetadata {
                     slot: account_update.slot,
                     pubkey: account_update.pubkey,
+                    transaction_signature: account_update.transaction_signature,
                 };
 
                 for pipe in self.account_pipes.iter_mut() {
@@ -823,10 +820,7 @@ impl PipelineBuilder {
     ///   sources first and allow the pipeline to finish processing any updates
     ///   that are still pending.
     pub fn shutdown_strategy(mut self, shutdown_strategy: ShutdownStrategy) -> Self {
-        log::trace!(
-            "shutdown_strategy(self, shutdown_strategy: {:?})",
-            shutdown_strategy
-        );
+        log::trace!("shutdown_strategy(self, shutdown_strategy: {shutdown_strategy:?})");
         self.shutdown_strategy = shutdown_strategy;
         self
     }
@@ -1310,7 +1304,7 @@ impl PipelineBuilder {
     ///     .metrics_flush_interval(60);
     /// ```
     pub fn metrics_flush_interval(mut self, interval: u64) -> Self {
-        log::trace!("metrics_flush_interval(self, interval: {:?})", interval);
+        log::trace!("metrics_flush_interval(self, interval: {interval:?})");
         self.metrics_flush_interval = Some(interval);
         self
     }
@@ -1335,8 +1329,7 @@ impl PipelineBuilder {
     /// ```
     pub fn datasource_cancellation_token(mut self, cancellation_token: CancellationToken) -> Self {
         log::trace!(
-            "datasource_cancellation_token(self, cancellation_token: {:?})",
-            cancellation_token
+            "datasource_cancellation_token(self, cancellation_token: {cancellation_token:?})"
         );
         self.datasource_cancellation_token = Some(cancellation_token);
         self
@@ -1361,7 +1354,7 @@ impl PipelineBuilder {
     ///     .channel_buffer_size(1000);
     /// ```
     pub fn channel_buffer_size(mut self, size: usize) -> Self {
-        log::trace!("channel_buffer_size(self, size: {:?})", size);
+        log::trace!("channel_buffer_size(self, size: {size:?})");
         self.channel_buffer_size = size;
         self
     }

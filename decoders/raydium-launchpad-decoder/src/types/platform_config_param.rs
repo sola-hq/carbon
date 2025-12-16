@@ -1,6 +1,6 @@
 use super::*;
 
-use alloc::string::String;
+use alloc::{format, string::String};
 use carbon_core::{borsh, CarbonDeserialize};
 
 #[derive(
@@ -14,4 +14,6 @@ pub enum PlatformConfigParam {
     Name(String),
     Web(String),
     Img(String),
+    CpSwapConfig,
+    AllInfo(PlatformConfigInfo),
 }

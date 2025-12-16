@@ -15,7 +15,7 @@ use {
     },
     solana_account::Account,
     solana_clock::Clock,
-    solana_program::{instruction::CompiledInstruction, message::v0::LoadedAddresses},
+    solana_message::{compiled_instruction::CompiledInstruction, v0::LoadedAddresses},
     solana_pubkey::Pubkey,
     solana_signature::Signature,
     solana_transaction_context::TransactionReturnData,
@@ -146,8 +146,7 @@ impl Datasource for HeliusWebsocket {
                     reconnection_attempts += 1;
                     if reconnection_attempts >= MAX_RECONNECTION_ATTEMPTS {
                         return Err(carbon_core::error::Error::Custom(format!(
-                            "Failed to create Enhanced Helius Websocket after {} attempts: {}",
-                            MAX_RECONNECTION_ATTEMPTS, err
+                            "Failed to create Enhanced Helius Websocket after {MAX_RECONNECTION_ATTEMPTS} attempts: {err}"
                         )));
                     }
                     tokio::time::sleep(Duration::from_millis(RECONNECTION_DELAY_MS)).await;
@@ -193,7 +192,7 @@ impl Datasource for HeliusWebsocket {
                     {
                         Ok(subscription) => subscription,
                         Err(err) => {
-                            log::error!("Failed to subscribe to Clock sysvar: {:?}", err);
+                            log::error!("Failed to subscribe to Clock sysvar: {err:?}");
                             iteration_cancellation_clock.cancel();
                             return;
                         }
@@ -241,7 +240,7 @@ impl Datasource for HeliusWebsocket {
                                                         last_clock_update.elapsed().as_nanos() as f64
                                                     )
                                                     .await
-                                                    .unwrap_or_else(|value| log::error!("Error recording metric: {}", value));
+                                                    .unwrap_or_else(|value| log::error!("Error recording metric: {value}"));
                                             }
                                         }
                                     }
@@ -283,9 +282,7 @@ impl Datasource for HeliusWebsocket {
                                     Ok(subscription) => subscription,
                                     Err(err) => {
                                         log::error!(
-                                            "Failed to subscribe to account {}: {:?}",
-                                            account,
-                                            err
+                                            "Failed to subscribe to account {account}: {err:?}"
                                         );
                                         return;
                                     }
@@ -313,25 +310,26 @@ impl Datasource for HeliusWebsocket {
                                                     }
                                                 };
 
-                                                if decoded_account.lamports == 0 && decoded_account.data.is_empty() && decoded_account.owner == solana_program::system_program::ID {
+                                                if decoded_account.lamports == 0 && decoded_account.data.is_empty() && decoded_account.owner == solana_system_interface::program::ID {
                                                     let accounts_tracked =
                                                         account_deletions_tracked.read().await;
                                                     if !accounts_tracked.is_empty() && accounts_tracked.contains(&account) {
                                                         let account_deletion = AccountDeletion {
                                                             pubkey: account,
                                                             slot: acc_event.context.slot,
+                                                            transaction_signature: None,
                                                         };
 
-                                                        metrics.record_histogram("helius_atlas_ws_account_deletion_process_time_nanoseconds", start_time.elapsed().as_nanos() as f64).await.unwrap_or_else(|value| log::error!("Error recording metric: {}", value));
+                                                        metrics.record_histogram("helius_atlas_ws_account_deletion_process_time_nanoseconds", start_time.elapsed().as_nanos() as f64).await.unwrap_or_else(|value| log::error!("Error recording metric: {value}"));
 
-                                                        metrics.increment_counter("helius_atlas_ws_account_deletions_received", 1).await.unwrap_or_else(|value| log::error!("Error recording metric: {}", value));
+                                                        metrics.increment_counter("helius_atlas_ws_account_deletions_received", 1).await.unwrap_or_else(|value| log::error!("Error recording metric: {value}"));
 
 
                                                         if let Err(err) = sender_clone.try_send((
                                                             Update::AccountDeletion(account_deletion),
                                                             id_for_account.clone(),
                                                         )) {
-                                                            log::error!("Error sending account update: {:?}", err);
+                                                            log::error!("Error sending account update: {err:?}");
                                                             break;
                                                         }
                                                     }
@@ -340,18 +338,19 @@ impl Datasource for HeliusWebsocket {
                                                         pubkey: account,
                                                         account: decoded_account,
                                                         slot: acc_event.context.slot,
+                                                        transaction_signature: None,
                                                     });
 
-                                                    metrics.record_histogram("helius_atlas_ws_account_process_time_nanoseconds", start_time.elapsed().as_nanos() as f64).await.unwrap_or_else(|value| log::error!("Error recording metric: {}", value));
+                                                    metrics.record_histogram("helius_atlas_ws_account_process_time_nanoseconds", start_time.elapsed().as_nanos() as f64).await.unwrap_or_else(|value| log::error!("Error recording metric: {value}"));
 
-                                                    metrics.increment_counter("helius_atlas_ws_account_updates_received", 1).await.unwrap_or_else(|value| log::error!("Error recording metric: {}", value));
+                                                    metrics.increment_counter("helius_atlas_ws_account_updates_received", 1).await.unwrap_or_else(|value| log::error!("Error recording metric: {value}"));
 
 
                                                     if let Err(err) = sender_clone.try_send((
                                                         update,
                                                         id_for_account.clone(),
                                                     )) {
-                                                        log::error!("Error sending account update: {:?}", err);
+                                                        log::error!("Error sending account update: {err:?}");
                                                         break;
                                                     }
                                                 }
@@ -391,7 +390,7 @@ impl Datasource for HeliusWebsocket {
                             match ws.transaction_subscribe(config.clone()).await {
                                 Ok(subscription) => subscription,
                                 Err(err) => {
-                                    log::error!("Failed to subscribe to transactions: {:?}", err);
+                                    log::error!("Failed to subscribe to transactions: {err:?}");
                                     return;
                                 }
                             };
@@ -432,7 +431,7 @@ impl Datasource for HeliusWebsocket {
                                             let meta_original = if let Some(meta) = encoded_transaction_with_status_meta.clone().meta {
                                                 meta
                                             } else {
-                                                log::warn!("Meta is malformed for transaction: {:?}", signature_str);
+                                                log::warn!("Meta is malformed for transaction: {signature_str:?}");
                                                 continue;
                                             };
 
@@ -441,12 +440,12 @@ impl Datasource for HeliusWebsocket {
                                             }
 
                                             let Some(decoded_transaction) = encoded_transaction_with_status_meta.transaction.decode() else {
-                                                log::error!("Failed to decode transaction: {:?}", encoded_transaction_with_status_meta);
+                                                log::error!("Failed to decode transaction: {encoded_transaction_with_status_meta:?}");
                                                 continue;
                                             };
 
                                             let meta_needed = TransactionStatusMeta {
-                                                status: meta_original.status,
+                                                status: meta_original.status.map_err(Into::into),
                                                 fee: meta_original.fee,
                                                 pre_balances: meta_original.pre_balances,
                                                 post_balances: meta_original.post_balances,
@@ -599,6 +598,7 @@ impl Datasource for HeliusWebsocket {
                                                     .compute_units_consumed
                                                     .map(|compute_unit_consumed| compute_unit_consumed)
                                                     .or(None),
+                                                cost_units: meta_original.cost_units.into(),
                                             };
 
                                             let update = Update::Transaction(Box::new(TransactionUpdate {
@@ -607,6 +607,7 @@ impl Datasource for HeliusWebsocket {
                                                 meta: meta_needed,
                                                 is_vote: config.filter.vote.is_some_and(|is_vote| is_vote),
                                                 slot: tx_event.slot,
+                                                index: None,
                                                 block_time: None,
                                                 block_hash: None,
                                             }));
@@ -617,16 +618,16 @@ impl Datasource for HeliusWebsocket {
                                                         start_time.elapsed().as_nanos() as f64
                                                     )
                                                     .await
-                                                    .unwrap_or_else(|value| log::error!("Error recording metric: {}", value));
+                                                    .unwrap_or_else(|value| log::error!("Error recording metric: {value}"));
 
-                                            metrics.increment_counter("helius_atlas_ws_transaction_updates_received", 1).await.unwrap_or_else(|value| log::error!("Error recording metric: {}", value));
+                                            metrics.increment_counter("helius_atlas_ws_transaction_updates_received", 1).await.unwrap_or_else(|value| log::error!("Error recording metric: {value}"));
 
 
                                             if let Err(err) = sender_clone.try_send((
                                                 update,
                                                 id_for_transaction.clone(),
                                             )) {
-                                                log::error!("Error sending transaction update: {:?}", err);
+                                                log::error!("Error sending transaction update: {err:?}");
                                                 break;
                                             }
                                         },
@@ -645,7 +646,7 @@ impl Datasource for HeliusWebsocket {
 
                 for handle in handles {
                     if let Err(e) = handle.await {
-                        log::error!("Helius WS Task failed: {:?}", e);
+                        log::error!("Helius WS Task failed: {e:?}");
                     }
                 }
 
@@ -662,7 +663,7 @@ impl Datasource for HeliusWebsocket {
                 }
                 result = handle => {
                     if let Err(e) = result {
-                        log::error!("Main task failed: {:?}", e);
+                        log::error!("Main task failed: {e:?}");
                     }
                 }
             }

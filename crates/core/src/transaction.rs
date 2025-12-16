@@ -62,16 +62,19 @@ use {
 ///   balances, and other metadata
 /// - `message`: The versioned message containing the transaction instructions
 ///   and account keys
+/// - `index`: The index of the transaction within the slot (block).
 /// - `block_time`: The Unix timestamp of when the transaction was processed.
+/// - `block_hash`: Block hash that can be used to detect a fork.
 ///
-/// Note: The `block_time` field may not be returned in all scenarios.
+/// Note: The `block_time` and `index` fields may not be available in all scenarios.
 #[derive(Debug, Clone, Default)]
 pub struct TransactionMetadata {
     pub slot: u64,
     pub signature: Signature,
     pub fee_payer: Pubkey,
     pub meta: solana_transaction_status::TransactionStatusMeta,
-    pub message: solana_program::message::VersionedMessage,
+    pub message: solana_message::VersionedMessage,
+    pub index: Option<u64>,
     pub block_time: Option<i64>,
     pub block_hash: Option<Hash>,
 }
@@ -100,7 +103,7 @@ impl TryFrom<crate::datasource::TransactionUpdate> for TransactionMetadata {
     type Error = crate::error::Error;
 
     fn try_from(value: crate::datasource::TransactionUpdate) -> Result<Self, Self::Error> {
-        log::trace!("try_from(transaction_update: {:?})", value);
+        log::trace!("try_from(transaction_update: {value:?})");
         let accounts = value.transaction.message.static_account_keys();
 
         Ok(TransactionMetadata {
@@ -111,6 +114,7 @@ impl TryFrom<crate::datasource::TransactionUpdate> for TransactionMetadata {
                 .ok_or(crate::error::Error::MissingFeePayer)?,
             meta: value.meta.clone(),
             message: value.transaction.message.clone(),
+            index: value.index,
             block_time: value.block_time,
             block_hash: value.block_hash,
         })
@@ -241,7 +245,7 @@ impl<T: InstructionDecoderCollection, U> TransactionPipe<T, U> {
 pub fn parse_instructions<T: InstructionDecoderCollection>(
     nested_ixs: &[NestedInstruction],
 ) -> Vec<ParsedInstruction<T>> {
-    log::trace!("parse_instructions(nested_ixs: {:?})", nested_ixs);
+    log::trace!("parse_instructions(nested_ixs: {nested_ixs:?})");
 
     let mut parsed_instructions: Vec<ParsedInstruction<T>> = Vec::new();
 
@@ -254,7 +258,7 @@ pub fn parse_instructions<T: InstructionDecoderCollection>(
             });
         } else {
             for inner_ix in nested_ix.inner_instructions.iter() {
-                parsed_instructions.extend(parse_instructions(&[inner_ix.clone()]));
+                parsed_instructions.extend(parse_instructions(std::slice::from_ref(inner_ix)));
             }
         }
     }
@@ -296,10 +300,7 @@ where
         instructions: &[NestedInstruction],
         metrics: Arc<MetricsCollection>,
     ) -> CarbonResult<()> {
-        log::trace!(
-            "TransactionPipe::run(instructions: {:?}, metrics)",
-            instructions,
-        );
+        log::trace!("TransactionPipe::run(instructions: {instructions:?}, metrics)",);
 
         let parsed_instructions = parse_instructions(instructions);
 

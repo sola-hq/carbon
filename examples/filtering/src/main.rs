@@ -14,13 +14,17 @@ use {
         KaminoLendingDecoder, PROGRAM_ID as KAMINO_LENDING_PROGRAM_ID,
     },
     carbon_log_metrics::LogMetrics,
-    carbon_yellowstone_grpc_datasource::YellowstoneGrpcGeyserClient,
+    carbon_yellowstone_grpc_datasource::{
+        YellowstoneGrpcClientConfig, YellowstoneGrpcGeyserClient,
+    },
+    solana_account::Account,
     solana_client::{nonblocking::rpc_client::RpcClient, rpc_config::RpcProgramAccountsConfig},
     solana_pubkey::Pubkey,
     std::{
         collections::{HashMap, HashSet},
         env,
         sync::Arc,
+        time::Duration,
     },
     tokio::sync::{mpsc::Sender, RwLock},
     tokio_util::sync::CancellationToken,
@@ -59,6 +63,19 @@ pub async fn main() -> CarbonResult<()> {
 
     transaction_filters.insert("kamino_transaction_filter".to_string(), transaction_filter);
 
+    let geyser_config = YellowstoneGrpcClientConfig::new(
+        None,
+        Some(Duration::from_secs(15)),
+        Some(Duration::from_secs(15)),
+        env::var("MAX_DECODING_MESSAGE_SIZE")
+            .ok()
+            .and_then(|v| v.parse::<usize>().ok()),
+        None,
+        env::var("TCP_NODE")
+            .ok()
+            .and_then(|v| v.parse::<bool>().ok()),
+    );
+
     let yellowstone_grpc = YellowstoneGrpcGeyserClient::new(
         env::var("GEYSER_URL").unwrap_or_default(),
         env::var("X_TOKEN").ok(),
@@ -67,6 +84,7 @@ pub async fn main() -> CarbonResult<()> {
         transaction_filters,
         Default::default(),
         Arc::new(RwLock::new(HashSet::new())),
+        geyser_config,
     );
     let yellowstone_grpc_id = DatasourceId::new_named("yellowstone_grpc");
 
@@ -170,19 +188,19 @@ impl Processor for KaminoLendingRealtimeAccountProcessor {
             pubkey_str,
             max_total_chars(
                 &match account.data {
-                    KaminoLendingAccount::UserState(user_state) => format!("{:?}", user_state),
+                    KaminoLendingAccount::UserState(user_state) => format!("{user_state:?}"),
                     KaminoLendingAccount::LendingMarket(lending_market) =>
-                        format!("{:?}", lending_market),
-                    KaminoLendingAccount::Obligation(obligation) => format!("{:?}", obligation),
+                        format!("{lending_market:?}"),
+                    KaminoLendingAccount::Obligation(obligation) => format!("{obligation:?}"),
                     KaminoLendingAccount::ReferrerState(referrer_state) =>
-                        format!("{:?}", referrer_state),
+                        format!("{referrer_state:?}"),
                     KaminoLendingAccount::ReferrerTokenState(referrer_token_state) => {
-                        format!("{:?}", referrer_token_state)
+                        format!("{referrer_token_state:?}")
                     }
-                    KaminoLendingAccount::ShortUrl(short_url) => format!("{:?}", short_url),
+                    KaminoLendingAccount::ShortUrl(short_url) => format!("{short_url:?}"),
                     KaminoLendingAccount::UserMetadata(user_metadata) =>
-                        format!("{:?}", user_metadata),
-                    KaminoLendingAccount::Reserve(reserve) => format!("{:?}", reserve),
+                        format!("{user_metadata:?}"),
+                    KaminoLendingAccount::Reserve(reserve) => format!("{reserve:?}"),
                 },
                 100
             )
@@ -231,19 +249,19 @@ impl Processor for KaminoLendingStartupAccountProcessor {
             pubkey_str,
             max_total_chars(
                 &match account.data {
-                    KaminoLendingAccount::UserState(user_state) => format!("{:?}", user_state),
+                    KaminoLendingAccount::UserState(user_state) => format!("{user_state:?}"),
                     KaminoLendingAccount::LendingMarket(lending_market) =>
-                        format!("{:?}", lending_market),
-                    KaminoLendingAccount::Obligation(obligation) => format!("{:?}", obligation),
+                        format!("{lending_market:?}"),
+                    KaminoLendingAccount::Obligation(obligation) => format!("{obligation:?}"),
                     KaminoLendingAccount::ReferrerState(referrer_state) =>
-                        format!("{:?}", referrer_state),
+                        format!("{referrer_state:?}"),
                     KaminoLendingAccount::ReferrerTokenState(referrer_token_state) => {
-                        format!("{:?}", referrer_token_state)
+                        format!("{referrer_token_state:?}")
                     }
-                    KaminoLendingAccount::ShortUrl(short_url) => format!("{:?}", short_url),
+                    KaminoLendingAccount::ShortUrl(short_url) => format!("{short_url:?}"),
                     KaminoLendingAccount::UserMetadata(user_metadata) =>
-                        format!("{:?}", user_metadata),
-                    KaminoLendingAccount::Reserve(reserve) => format!("{:?}", reserve),
+                        format!("{user_metadata:?}"),
+                    KaminoLendingAccount::Reserve(reserve) => format!("{reserve:?}"),
                 },
                 100
             )
@@ -297,10 +315,17 @@ impl Datasource for GpaRpcDatasource {
         let program_accounts = match &self.config {
             Some(config) => {
                 rpc_client
-                    .get_program_accounts_with_config(&self.program_id, config.clone())
+                    .get_program_ui_accounts_with_config(&self.program_id, config.clone())
                     .await
             }
-            None => rpc_client.get_program_accounts(&self.program_id).await,
+            None => {
+                rpc_client
+                    .get_program_ui_accounts_with_config(
+                        &self.program_id,
+                        RpcProgramAccountsConfig::default(),
+                    )
+                    .await
+            }
         };
 
         let Ok(program_accounts) = program_accounts else {
@@ -312,19 +337,22 @@ impl Datasource for GpaRpcDatasource {
         let id_for_loop = id.clone();
 
         for (pubkey, account) in program_accounts {
-            if let Err(e) = sender.try_send((
-                Update::Account(AccountUpdate {
-                    pubkey,
-                    account,
-                    slot,
-                }),
-                id_for_loop.clone(),
-            )) {
-                log::error!("Failed to send account update: {:?}", e);
+            if let Some(account) = account.decode::<Account>() {
+                if let Err(e) = sender.try_send((
+                    Update::Account(AccountUpdate {
+                        pubkey,
+                        account,
+                        slot,
+                        transaction_signature: None,
+                    }),
+                    id_for_loop.clone(),
+                )) {
+                    log::error!("Failed to send account update: {e:?}");
+                }
+                metrics
+                    .increment_counter("gpa_rpc_datasource_account_ingested", 1)
+                    .await?;
             }
-            metrics
-                .increment_counter("gpa_rpc_datasource_account_ingested", 1)
-                .await?;
         }
 
         Ok(())

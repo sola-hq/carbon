@@ -235,11 +235,13 @@ pub enum UpdateType {
 /// - `pubkey`: The public key of the account being updated.
 /// - `account`: The new state of the account.
 /// - `slot`: The slot number in which this account update was recorded.
+/// - `transaction_signature`: Signature of the transaction that caused the update.
 #[derive(Debug, Clone)]
 pub struct AccountUpdate {
     pub pubkey: Pubkey,
     pub account: Account,
     pub slot: u64,
+    pub transaction_signature: Option<Signature>,
 }
 
 /// Represents the details of a Solana block, including its slot, hashes, rewards, and timing information.
@@ -274,10 +276,12 @@ pub struct BlockDetails {
 ///
 /// - `pubkey`: The public key of the deleted account.
 /// - `slot`: The slot number in which the account was deleted.
+/// - `transaction_signature`: Signature of the transaction that caused the update.
 #[derive(Debug, Clone)]
 pub struct AccountDeletion {
     pub pubkey: Pubkey,
     pub slot: u64,
+    pub transaction_signature: Option<Signature>,
 }
 
 /// Represents a transaction update in the Solana network, including transaction
@@ -295,10 +299,11 @@ pub struct AccountDeletion {
 ///   and logs.
 /// - `is_vote`: A boolean indicating whether the transaction is a vote.
 /// - `slot`: The slot number in which the transaction was recorded.
+/// - `index`: The index of the transaction within the slot (block).
 /// - `block_time`: The Unix timestamp of when the transaction was processed.
 /// - `block_hash`: Block hash that can be used to detect a fork.
 ///
-/// Note: The `block_time` field may not be returned in all scenarios.
+/// Note: The `block_time` and `index` fields may not be available in all scenarios.
 #[derive(Debug, Clone)]
 pub struct TransactionUpdate {
     pub signature: Signature,
@@ -306,6 +311,7 @@ pub struct TransactionUpdate {
     pub meta: TransactionStatusMeta,
     pub is_vote: bool,
     pub slot: u64,
+    pub index: Option<u64>,
     pub block_time: Option<i64>,
     pub block_hash: Option<Hash>,
 }

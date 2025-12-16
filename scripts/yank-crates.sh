@@ -2,7 +2,7 @@
 
 set -ex
 
-VERSION="0.9.0"
+VERSION="0.12.0"
 
 workspace_crates=(
     carbon-macros
@@ -10,26 +10,33 @@ workspace_crates=(
     carbon-test-utils
     carbon-core
 
-    carbon-postgres-client
-    carbon-gql-server
-
     carbon-helius-atlas-ws-datasource
+    carbon-helius-gpa-v2-datasource
+    carbon-helius-laserstream-datasource
     carbon-rpc-block-crawler-datasource
     carbon-rpc-block-subscribe-datasource
+    carbon-rpc-gpa-datasource
     carbon-rpc-program-subscribe-datasource
     carbon-rpc-transaction-crawler-datasource
     carbon-jito-shredstream-grpc-datasource
     carbon-yellowstone-grpc-datasource
+    carbon-stream-message-datasource 
 
     carbon-log-metrics
     carbon-prometheus-metrics
 
     carbon-address-lookup-table-decoder
     carbon-associated-token-account-decoder
+    carbon-bonkswap-decoder
     carbon-boop-decoder
+    carbon-bubblegum-decoder
+    carbon-circle-message-transmitter-v2-decoder
+    carbon-circle-token-messenger-v2-decoder
+    carbon-dflow-aggregator-v4-decoder
     carbon-drift-v2-decoder
     carbon-fluxbeam-decoder
     carbon-gavel-decoder
+    carbon-heaven-decoder
     carbon-jupiter-dca-decoder
     carbon-jupiter-limit-order-2-decoder
     carbon-jupiter-limit-order-decoder
@@ -46,6 +53,8 @@ workspace_crates=(
     carbon-meteora-damm-v2-decoder
     carbon-meteora-dlmm-decoder
     carbon-meteora-pools-decoder
+    carbon-meteora-vault-decoder
+    carbon-meteora-dbc-decoder
     carbon-moonshot-decoder
     carbon-mpl-core-decoder
     carbon-mpl-token-metadata-decoder
@@ -53,8 +62,10 @@ workspace_crates=(
     carbon-okx-dex-decoder
     carbon-openbook-v2-decoder
     carbon-orca-whirlpool-decoder
+    carbon-pancake-swap-decoder
     carbon-phoenix-v1-decoder
     carbon-pump-swap-decoder
+    carbon-pump-fees-decoder
     carbon-pumpfun-decoder
     carbon-raydium-amm-v4-decoder
     carbon-raydium-clmm-decoder
@@ -67,11 +78,13 @@ workspace_crates=(
     carbon-stabble-stable-swap-decoder
     carbon-stabble-weighted-swap-decoder
     carbon-stake-program-decoder
+    carbon-swig-decoder
     carbon-system-program-decoder
     carbon-token-2022-decoder
     carbon-token-program-decoder
-    carbon-virtual-curve-decoder
+    carbon-vertigo-decoder
     carbon-virtuals-decoder
+    carbon-wavebreak-decoder
     carbon-zeta-decoder
 )
 
